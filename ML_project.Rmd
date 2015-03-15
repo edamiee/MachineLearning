@@ -1,0 +1,94 @@
+---
+title: "Machine Learning Project"
+author: "Damien Edwards"
+date: "March 15, 2015"
+output: html_document
+---
+
+##Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+##Data
+The training data for this project are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+## Model
+
+The outcome variable is classe- a factor variable with 5 levels. 
+- exactly according to the specification (Class A)
+- throwing the elbows to the front (Class B)
+- lifting the dumbbell only halfway (Class C)
+- lowering the dumbbell only halfway (Class D)
+- throwing the hips to the front (Class E)
+
+###Cross-validation
+
+The cross-validation will be performed using a subset of the training data set without replacement into 2 subsets. Our model will be fiited to the subTraining data set and tested on the subTest data set. Once the accurate model is determined it will be tested on the original Testing data set.
+
+### Expected out-of-sample error
+Expected out-of-smample error will correspond to the accuracy in the cross-validation data.Expected number of missclassified observations will be the expected value of the out-of-sample error.
+
+### Modeling choices
+
+The variable classe is unordered factor variable. I will use Decision Tree and random forest algorithms to model because of their classification features. 
+
+##Histogram
+```{recho=FALSE}
+
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+
+##Create traing and test set
+trainingset <- read.csv("/Users/dame81/Desktop/ML/pml-training.csv", na.strings=c("NA","#DIV/0!", ""))
+testingset<-read.csv("/Users/dame81/Desktop/ML/pml-testing.csv", na.strings=c("NA","#DIV/0!", ""))
+## Delete Column missing values
+trainingset<-trainingset[,colSums(is.na(trainingset)) == 0]
+testingset <-testingset[,colSums(is.na(testingset)) == 0]
+trainingset   <-trainingset[,-c(1:7)]
+testingset <-testingset[,-c(1:7)]
+## Subset of data
+subset<-createDataPartition(y=trainingset$classe, p=0.75, list=FALSE)
+subTraining <- trainingset[subset, ] 
+subTesting <- trainingset[-subset, ]
+```
+
+```{r, echo=TRUE}
+plot(subTraining$classe, col="green", main="Levels of the variable classe within the subTraining data set", xlab="classe levels", ylab="Frequency")
+```
+
+##Prediction Model Using Decision Making Tree
+
+```{r,echo=TRUE}
+modelA <- rpart(classe ~ ., data=subTraining, method="class")
+predictionA<- predict(modelA, subTesting, type = "class")
+rpart.plot(modelA, main="Classification Tree", extra=102, under=TRUE, faclen=0)
+```
+
+```{r,echo=TRUE}
+confusionMatrix(predictionA, subTesting$classe)
+```
+
+## Prediction Model Using Random Forest
+```{r,echo=TRUE}
+modelB <- randomForest(classe ~. , data=subTraining, method="class")
+predictionB<- predict(modelB, subTesting, type = "class")
+confusionMatrix(predictionB, subTesting$classe)
+```
+
+##Decision
+
+The Random Forest prediction Model is more accurate than the Decision Tree model. The out of sample error is 0.5%. The Random Forest Model will be choosen.
+
+##Final Prediction Model
+```{r,echo=TRUE}
+finalmodel<-predict(modelB,testingset,type="class")
+finalmodel
+```
